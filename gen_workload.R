@@ -18,7 +18,9 @@
 
 args <- commandArgs(trailingOnly = TRUE)
 
+
 # Setting some default values
+# Defined only in the case that there is no input arguments
 num_procs <- 50
 mean_io_bursts <- 10
 mean_iat <- 25
@@ -26,6 +28,8 @@ min_CPU <- 1.0
 max_CPU <- 2.0
 min_IO <- 0.3
 max_IO <- 0.5
+
+#Setting values according input arguments
 
 if(length(args) == 7) {
   num_procs <- as.numeric(args[1])
@@ -35,6 +39,7 @@ if(length(args) == 7) {
   max_CPU <- as.numeric(args[5])
   min_IO <- as.numeric(args[6])
   max_IO <- as.numeric(args[7])
+  cat("# Using the following values to generate the workload:")
 } else if (length(args) == 0) {
   cat("# No arguments supplied, using default parameter values.\n")
 } else {
