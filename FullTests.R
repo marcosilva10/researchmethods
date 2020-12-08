@@ -78,5 +78,20 @@ plot(c(1,2,4,6,10), TurnAroundTimeRR,
      ylab = "Average turnaround time")
 
 # Some statistical evaluation
+# FCFS Results
+barplot(tableSRTF$pid, tableSRTF$cpu_bursts_time,
+     xlab = "Processes",
+     ylab = "CPU Burst",
+     main = "Order of submission")
+
+barplot(tableSRTF$arrival_time, tableSRTF$ready_wait_time,
+        xlab = "Arrivel Time",
+        ylab = "time",
+        main = "CPU Waiting Time")
+
+barplot(tableSRTF$arrival_time, tableSRTF$io_wait_time,
+        xlab = "Arrivel Time",
+        ylab = "time",
+        main = "IO Waiting Time")
 
 
