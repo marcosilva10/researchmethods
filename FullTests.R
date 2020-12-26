@@ -5,7 +5,17 @@ library(dplyr)
 
 #Produce Workloads, need function to run it changing parameters
 
-info = capture.output(source("gen_workload.R"))
+NumProcs <- 50
+MeanIoBursts <- 10
+MeanIat <- 25
+MinCPU <- 1.0
+MaxCPU <- 2.0
+MinIO <- 0.3
+MaxIO <- 0.5
+
+createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
+
+info =  system(createTestStr, intern = TRUE)
 cat(info, file="testScript.txt", sep="\n")
 
 
@@ -43,8 +53,6 @@ sdWaitingTimes = c(sd(tableFCFS$ready_wait_time),
 
 
 df = data.frame(meanTotalTime, meanWaitingTimes, sdWaitingTimes)
-ggplot(df, aes(fill=c("fcfs", "sjf", "rr", "srtf"),y=df$meanTotalTime, x=df$meanWaitingTimes)) + 
-       geom_bar(position="dodge", stat="identity")
 
 
 # ============ Quantum time evaluation for RR Scheduling ===============
@@ -94,4 +102,61 @@ barplot(tableSRTF$arrival_time, tableSRTF$io_wait_time,
         ylab = "time",
         main = "IO Waiting Time")
 
+barplot(tableSRTF$tat, tableSRTF$ready_wait_time,
+        xlab = "total time",
+        ylab = "ready WT",
+        main = "IO Waiting Time")
 
+barplot(tableSRTF$tat, tableSRTF$io_wait_time,
+        xlab = "Arrivel Time",
+        ylab = "io WT",
+        main = "IO Waiting Time")
+
+barplot(tableSJF$tat, tableSJF$ready_wait_time,
+        xlab = "total time",
+        ylab = "ready WT",
+        main = "IO Waiting Time")
+
+barplot(tableSJF$tat, tableSJF$io_wait_time,
+        xlab = "Arrivel Time",
+        ylab = "io WT",
+        main = "IO Waiting Time")
+
+barplot(tableFCFS$tat, tableFCFS$ready_wait_time,
+        xlab = "total time",
+        ylab = "ready WT",
+        main = "IO Waiting Time")
+
+barplot(tableFCFS$tat, tableFCFS$io_wait_time,
+        xlab = "Arrivel Time",
+        ylab = "io WT",
+        main = "IO Waiting Time")
+
+barplot(tableRR$tat, tableRR$ready_wait_time,
+        xlab = "total time",
+        ylab = "ready WT",
+        main = "IO Waiting Time")
+
+barplot(tableRR$tat, tableRR$io_wait_time,
+        xlab = "Arrivel Time",
+        ylab = "io WT",
+        main = "IO Waiting Time")
+
+par(mfrow=c(2,2))
+
+plotRRWaitingTime <- plot(tableRR$tat, tableRR$ready_wait_time,
+                     xlab = "TotalTime",
+                     ylab = "ready Wait Time",
+                     main = "Round Robin")
+plotFCFSWaitingTime <- plot(tableFCFS$tat, tableFCFS$ready_wait_time,
+                     xlab = "TotalTime",
+                     ylab = "ready Wait Time",
+                     main = "First come First Served")
+plotSJFWaitingTime <- plot(tableSJF$tat, tableSJF$ready_wait_time,
+                     xlab = "TotalTime",
+                     ylab = "ready Wait Time",
+                     main = "S JOB FIRST")
+plotSRTFWaitingTime <- plot(tableSRTF$tat, tableSRTF$ready_wait_time,
+                     xlab = "TotalTime",
+                     ylab = "ready Wait Time",
+                     main = "Shortest ready JOB FIRST")
