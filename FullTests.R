@@ -144,19 +144,32 @@ barplot(tableRR$tat, tableRR$io_wait_time,
 
 par(mfrow=c(2,2))
 
-plotRRWaitingTime <- plot(tableRR$tat, tableRR$ready_wait_time,
-                     xlab = "TotalTime",
-                     ylab = "ready Wait Time",
-                     main = "Round Robin")
-plotFCFSWaitingTime <- plot(tableFCFS$tat, tableFCFS$ready_wait_time,
-                     xlab = "TotalTime",
-                     ylab = "ready Wait Time",
-                     main = "First come First Served")
-plotSJFWaitingTime <- plot(tableSJF$tat, tableSJF$ready_wait_time,
-                     xlab = "TotalTime",
-                     ylab = "ready Wait Time",
-                     main = "S JOB FIRST")
-plotSRTFWaitingTime <- plot(tableSRTF$tat, tableSRTF$ready_wait_time,
-                     xlab = "TotalTime",
-                     ylab = "ready Wait Time",
-                     main = "Shortest ready JOB FIRST")
+ymax  = 200
+xmmax = 100
+xleg = "Bursts Time"
+yleg = "Total active time"
+
+plotRRWaitingTime <- plot(tableRR$bursts_time, tableRR$tat,
+                     xlab = xleg,
+                     ylab = yleg,
+                     main = "Round Robin",
+                     ylim = c(0, ymax),
+                     xlim = c(0, xmmax))
+plotFCFSWaitingTime <- plot(tableFCFS$bursts_time, tableFCFS$tat,
+                     xlab = xleg,
+                     ylab = yleg,
+                     main = "First come First Served",
+                     ylim = c(0, ymax),
+                     xlim = c(0, xmmax))
+plotSJFWaitingTime <- plot(tableSJF$bursts_time, tableSJF$tat,
+                     xlab = xleg,
+                     ylab = yleg,
+                     main = "S JOB FIRST",
+                     ylim = c(0, ymax),
+                     xlim = c(0, xmmax))
+plotSRTFWaitingTime <- plot(tableSRTF$bursts_time, tableSRTF$tat,
+                     xlab = xleg,
+                     ylab = yleg,
+                     main = "Shortest ready JOB FIRST",
+                     ylim = c(0, ymax),
+                     xlim = c(0, xmmax))
