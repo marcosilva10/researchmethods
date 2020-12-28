@@ -4,7 +4,7 @@ library(tidyr)
 library(dplyr)
 
 #Produce Workloads, need function to run it changing parameters
-
+#Defaul and initial values
 NumProcs <- 50
 MeanIoBursts <- 10
 MeanIat <- 25
@@ -13,26 +13,42 @@ MaxCPU <- 2.0
 MinIO <- 0.3
 MaxIO <- 0.5
 
-createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
+#Function to generate workload
+gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO){
+        
+        cat("# == Generating Workload == \n")
+        cat(sprintf("# num_procs = %d\n", NumProcs))
+        cat(sprintf("# mean_io_bursts = %g\n", MeanIoBursts))
+        cat(sprintf("# mean_iat = %g\n", MeanIat))
+        cat(sprintf("# min_CPU = %g\n", MinCPU))
+        cat(sprintf("# max_CPU = %g\n", MaxCPU))
+        cat(sprintf("# min_IO = %g\n", MinIO))
+        cat(sprintf("# max_IO = %g\n", MaxIO))
+        cat("#===================\n")
+        
+        createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
+        info =  system(createTestStr, intern = TRUE)
+        cat(info, file="testScript.txt", sep="\n")  
+        invisible(info)
+}
 
-info =  system(createTestStr, intern = TRUE)
-cat(info, file="testScript.txt", sep="\n")
-
-
-#Run in 4 methods, need function to make it one line per file
-
-system("py simulator.py --cpu-scheduler fcfs --input-file testScript.txt --output-file ResultFiles/testResultFCFS.txt")
-system("py simulator.py --cpu-scheduler sjf --input-file testScript.txt --output-file ResultFiles/testResultSJF.txt")
-system("py simulator.py --cpu-scheduler rr --quantum 1.0 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-system("py simulator.py --cpu-scheduler srtf --input-file testScript.txt --output-file ResultFiles/testResultSRTF.txt")
-
-#Collect Results from each
-
-tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-tableSJF = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
-tableRR = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
-
+#Function to execute simulator.py
+exec_simulator <- function(){
+        
+        #Run in 4 methods, need function to make it one line per file
+        #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
+        system("py simulator.py --cpu-scheduler fcfs --input-file testScript.txt --output-file ResultFiles/testResultFCFS.txt")
+        system("py simulator.py --cpu-scheduler sjf  --input-file testScript.txt --output-file ResultFiles/testResultSJF.txt")
+        system("py simulator.py --cpu-scheduler rr   --quantum 1.0 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
+        system("py simulator.py --cpu-scheduler srtf --input-file testScript.txt --output-file ResultFiles/testResultSRTF.txt")
+        
+        #Collect Results from each
+        tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+        tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
+        tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+        tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
+        
+}
 
 #Process and make data, maybe plotting
 
@@ -53,6 +69,7 @@ sdWaitingTimes = c(sd(tableFCFS$ready_wait_time),
 
 
 df = data.frame(meanTotalTime, meanWaitingTimes, sdWaitingTimes)
+
 
 
 # ============ Quantum time evaluation for RR Scheduling ===============
@@ -142,6 +159,7 @@ barplot(tableRR$tat, tableRR$io_wait_time,
         ylab = "io WT",
         main = "IO Waiting Time")
 
+#===========================
 par(mfrow=c(2,2))
 
 ymax  = 200
@@ -173,3 +191,41 @@ plotSRTFWaitingTime <- plot(tableSRTF$bursts_time, tableSRTF$tat,
                      main = "Shortest ready JOB FIRST",
                      ylim = c(0, ymax),
                      xlim = c(0, xmmax))
+
+#=======================================================
+# Test each scheduling in X runs varying some parameter
+#=======================================================
+i <- 1
+meanWaitingTimes <- c()
+num_runs = 10
+tmp = c(1,2,3,4)
+
+for (i in seq(1, by=length(tmp), length=num_runs)){
+        
+        mean_i0 = i #Change to exponential?
+        
+        gen_workload(NumProcs, mean_i0, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+        exec_simulator()
+        
+        tmp = c(mean(tableFCFS$ready_wait_time), 
+                mean(tableSJF$ready_wait_time), 
+                mean(tableRR$ready_wait_time), 
+                mean(tableSRTF$ready_wait_time))
+        
+        meanWaitingTimes[seq(i, length=length(tmp))] = tmp;
+}
+
+dim(meanWaitingTimes) = c(length(tmp),num_runs)
+
+colnames(meanWaitingTimes) <- paste0("Nº", 1:num_runs)               # column names
+rownames(meanWaitingTimes) <- paste0(c("FCFS", "SJF", "RR", "RTF")) # row names
+
+#barplot:
+barplot(meanWaitingTimes, beside = T,  legend = TRUE, col = c("red","green", "yellow", "blue"),
+        xlab = "Runs",
+        ylab = "Average Waiting time",
+        main = "Comparative Sheduling Chart")
+#======================
+
+
+
