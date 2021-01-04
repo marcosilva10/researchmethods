@@ -47,6 +47,20 @@ exec_simulator <- function(){
     
 }
 
+plotBurstXTat <- function(tableToUse, schedulername, xmax, ymax) {
+    
+    xleg = "Bursts Time"
+    yleg = "Turn around time"
+    
+    plotRRWaitingTime <- plot(tableToUse$bursts_time, tableToUse$tat,
+                              xlab = xleg,
+                              ylab = yleg,
+                              main = schedulername,
+                              ylim = c(0, ymax),
+                              xlim = c(0, xmax))
+    
+    abline(lm(tat ~ bursts_time, data = tableToUse), col = "blue")
+}
 # ============= Collect Results from each ============
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
 tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
@@ -72,6 +86,12 @@ MaxIO <- 0.5
 gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
 exec_simulator()
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+
+
+tableFCFSLargeProccess = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+tableSJFLargeProccess  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
+tableRRLargeProccess   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+tableSRTFLargeProccess = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
 
 df = data.frame(cpu_bursts_time = tableFCFS$cpu_bursts_time, ready_wait_time = tableFCFS$ready_wait_time)
 df$data <- 'FCFS'
@@ -103,6 +123,10 @@ MaxIO <- 0.5
 gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
 exec_simulator()
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+tableFCFSSmallProccess = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+tableSJFSmallProccess  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
+tableRRSmallProccess   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+tableSRTFSmallProccess = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
 
 df = data.frame(cpu_bursts_time = tableFCFS$cpu_bursts_time, ready_wait_time = tableFCFS$ready_wait_time)
 df$data <- 'FCFS'
@@ -345,17 +369,17 @@ ggplot(mt, aes(x=as.numeric(processes), y=value, color=variable)) +
 
 par(mfrow=c(2,2))
 
-ymax  = max(max(tableRR$tat), max(tableRR$tat), max(tableRR$tat), max(tableRR$tat))*1.2
-xmmax = max(max(tableRR$bursts_time), max(tableRR$bursts_time), max(tableRR$bursts_time), max(tableRR$bursts_time))*1.2
+ymax  = max(max(tableRRLargeProccess$tat), max(tableFCFSLargeProccess$tat), max(tableSJFLargeProccess$tat), max(tableSRTFLargeProccess$tat))*1.2
+xmax = max(max(tableRRLargeProccess$bursts_time), max(tableFCFSLargeProccess$bursts_time), max(tableSJFLargeProccess$bursts_time), max(tableSRTFLargeProccess$bursts_time))*1.2
 xleg = "Bursts Time"
 yleg = "Turn around time"
 
-plotRRWaitingTime <- plot(tableRR$bursts_time, tableRR$tat,
-                          xlab = xleg,
-                          ylab = yleg,
-                          main = "Round Robin",
-                          ylim = c(0, ymax),
-                          xlim = c(0, xmmax))
+plotBurstXTat(tableRRLargeProccess, "Round Robin", xmax, ymax)
+plotBurstXTat(tableFCFSLargeProccess, "First Come First Served", xmax, ymax)
+plotBurstXTat(tableSJFLargeProccess, "Shortest Job First", xmax, ymax)
+plotBurstXTat(tableSRTFLargeProccess, "Shortest Remaining Time First", xmax, ymax)
+
+mtext("Large 100 proccess", outer = TRUE, cex = 1.5)
 
 df <- as.data.frame((tableRR))
 ggplot(df, aes(x = bursts_time, y = tat)) +
@@ -364,26 +388,12 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
     xlab(xleg) + 
     ylab(yleg) + ggtitle("Round Robin")
 
-plotFCFSWaitingTime <- plot(tableFCFS$bursts_time, tableFCFS$tat,
-                            xlab = xleg,
-                            ylab = yleg,
-                            main = "First come First Served",
-                            ylim = c(0, ymax),
-                            xlim = c(0, xmmax))
-
 df <- as.data.frame((tableFCFS))
 ggplot(df, aes(x = bursts_time, y = tat)) +
     geom_point() +
     geom_smooth(method = "lm",se = FALSE) +
     xlab(xleg) + 
     ylab(yleg) + ggtitle("First Come First Served")
-
-plotSJFWaitingTime <- plot(tableSJF$bursts_time, tableSJF$tat,
-                           xlab = xleg,
-                           ylab = yleg,
-                           main = "S JOB FIRST",
-                           ylim = c(0, ymax),
-                           xlim = c(0, xmmax))
 
 df <- as.data.frame((tableSJF))
 ggplot(df, aes(x = bursts_time, y = tat)) +
@@ -392,16 +402,27 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
     xlab(xleg) + 
     ylab(yleg) + ggtitle("Shortest Job First")
 
-plotSRTFWaitingTime <- plot(tableSRTF$bursts_time, tableSRTF$tat,
-                            xlab = xleg,
-                            ylab = yleg,
-                            main = "Shortest ready JOB FIRST",
-                            ylim = c(0, ymax),
-                            xlim = c(0, xmmax))
-
 df <- as.data.frame((tableSRTF))
 ggplot(df, aes(x = bursts_time, y = tat)) +
     geom_point() +
     geom_smooth(method = "lm",se = FALSE) +
     xlab(xleg) + 
     ylab(yleg) + ggtitle("Shortest Remaining Time First")
+
+
+
+#=======================
+#Small proccess
+#=========================
+
+par(mfrow=c(2,2))
+
+ymax  = max(max(tableRRSmallProccess$tat), max(tableFCFSSmallProccess$tat), max(tableSRTFSmallProccess$tat), max(tableSRTFSmallProccess$tat))*1.2
+xmax = max(max(tableRRSmallProccess$bursts_time), max(tableFCFSSmallProccess$bursts_time), max(tableSRTFSmallProccess$bursts_time), max(tableSRTFSmallProccess$bursts_time))*1.2
+
+plotBurstXTat(tableRRSmallProccess, "Round Robin", xmax, ymax)
+plotBurstXTat(tableFCFSSmallProccess, "First Come First Served", xmax, ymax)
+plotBurstXTat(tableSJFSmallProccess, "Shortest Job First", xmax, ymax)
+plotBurstXTat(tableSRTFSmallProccess, "Shortest Remaining Time First", xmax, ymax)
+
+mtext("Small 10 proccess", outer = TRUE, cex = 1.5)
