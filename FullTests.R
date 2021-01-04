@@ -330,7 +330,7 @@ rownames(meanTatTimes) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
 
 #line plot:
 mt = as.data.frame(t(meanTatTimes))
-rownames(mt)=c("FCFS", "SJF", "RR", "SRTF")
+#rownames(mt)=c("FCFS", "SJF", "RR", "SRTF")
 mt$processes <- rownames(mt)
 mt      <- melt(mt, id.vars=c("processes"))
 
@@ -345,10 +345,10 @@ ggplot(mt, aes(x=as.numeric(processes), y=value, color=variable)) +
 
 par(mfrow=c(2,2))
 
-ymax  = 200
-xmmax = 100
+ymax  = max(max(tableRR$tat), max(tableRR$tat), max(tableRR$tat), max(tableRR$tat))*1.2
+xmmax = max(max(tableRR$bursts_time), max(tableRR$bursts_time), max(tableRR$bursts_time), max(tableRR$bursts_time))*1.2
 xleg = "Bursts Time"
-yleg = "Total active time"
+yleg = "Turn around time"
 
 plotRRWaitingTime <- plot(tableRR$bursts_time, tableRR$tat,
                           xlab = xleg,
@@ -362,7 +362,7 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
     geom_point() +
     geom_smooth(method = "lm",se = FALSE) +
     xlab(xleg) + 
-    ylab(yleg) + ggtitle("Average Turnaround Time")
+    ylab(yleg) + ggtitle("Round Robin")
 
 plotFCFSWaitingTime <- plot(tableFCFS$bursts_time, tableFCFS$tat,
                             xlab = xleg,
@@ -376,7 +376,7 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
     geom_point() +
     geom_smooth(method = "lm",se = FALSE) +
     xlab(xleg) + 
-    ylab(yleg) + ggtitle("Average Turnaround Time")
+    ylab(yleg) + ggtitle("First Come First Served")
 
 plotSJFWaitingTime <- plot(tableSJF$bursts_time, tableSJF$tat,
                            xlab = xleg,
@@ -390,7 +390,7 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
     geom_point() +
     geom_smooth(method = "lm",se = FALSE) +
     xlab(xleg) + 
-    ylab(yleg) + ggtitle("Average Turnaround Time")
+    ylab(yleg) + ggtitle("Shortest Job First")
 
 plotSRTFWaitingTime <- plot(tableSRTF$bursts_time, tableSRTF$tat,
                             xlab = xleg,
@@ -404,4 +404,4 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
     geom_point() +
     geom_smooth(method = "lm",se = FALSE) +
     xlab(xleg) + 
-    ylab(yleg) + ggtitle("Average Turnaround Time")
+    ylab(yleg) + ggtitle("Shortest Remaining Time First")
