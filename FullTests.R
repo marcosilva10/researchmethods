@@ -2,6 +2,7 @@ library(reticulate)
 library(ggplot2)
 library(tidyr)
 library(dplyr)
+library(reshape)
 
 #Produce Workloads, need function to run it changing parameters
 #Defaul and initial values
@@ -24,7 +25,7 @@ gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO
         cat(sprintf("# max_CPU = %g\n", MaxCPU))
         cat(sprintf("# min_IO = %g\n", MinIO))
         cat(sprintf("# max_IO = %g\n", MaxIO))
-        cat("#===================\n")
+        cat("# ===================\n")
         
         createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
         info =  system(createTestStr, intern = TRUE)
@@ -35,6 +36,8 @@ gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO
 #Function to execute simulator.py
 exec_simulator <- function(){
         
+        cat("# == Execution simulator ==\n")
+        
         #Run in 4 methods, need function to make it one line per file
         #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
         system("py simulator.py --cpu-scheduler fcfs --input-file testScript.txt --output-file ResultFiles/testResultFCFS.txt")
@@ -42,16 +45,9 @@ exec_simulator <- function(){
         system("py simulator.py --cpu-scheduler rr   --quantum 1.0 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
         system("py simulator.py --cpu-scheduler srtf --input-file testScript.txt --output-file ResultFiles/testResultSRTF.txt")
         
-        #Collect Results from each
-        tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-        tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
-        tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-        tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
-        
 }
 
 #Process and make data, maybe plotting
-
 meanTotalTime = c(mean(tableFCFS$tat), 
                      mean(tableSJF$tat), 
                      mean(tableRR$tat), 
@@ -71,12 +67,12 @@ sdWaitingTimes = c(sd(tableFCFS$ready_wait_time),
 df = data.frame(meanTotalTime, meanWaitingTimes, sdWaitingTimes)
 
 
-
 # ============ Quantum time evaluation for RR Scheduling ===============
 # The performance of RR is sensitive to the time quantum selected. 
 # Most modern systems use time quantum between 10 and 100 milliseconds.
 # This needs to be automated.
 # ======================================================================
+
 system("py simulator.py --cpu-scheduler rr --quantum 1.0 --input-file testScript.txt --output-file ResultFiles/testResultRRQuantum1.txt")
 system("py simulator.py --cpu-scheduler rr --quantum 2.0 --input-file testScript.txt --output-file ResultFiles/testResultRRQuantum2.txt")
 system("py simulator.py --cpu-scheduler rr --quantum 4.0 --input-file testScript.txt --output-file ResultFiles/testResultRRQuantum4.txt")
@@ -192,40 +188,100 @@ plotSRTFWaitingTime <- plot(tableSRTF$bursts_time, tableSRTF$tat,
                      ylim = c(0, ymax),
                      xlim = c(0, xmmax))
 
-#=======================================================
-# Test each scheduling in X runs varying some parameter
-#=======================================================
-i <- 1
+
+#==========================================================
+# Designed to evaluate the waiting time
+# according to the number of processes
+#==========================================================
+
 meanWaitingTimes <- c()
 num_runs = 10
 tmp = c(1,2,3,4)
 
+aux <- 1
 for (i in seq(1, by=length(tmp), length=num_runs)){
-        
-        mean_i0 = i #Change to exponential?
-        
-        gen_workload(NumProcs, mean_i0, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+
+        eval_parameter <- aux 
+    
+        gen_workload(eval_parameter, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
         exec_simulator()
         
+        #Collect Results from each
+        cat("# == collecting results ==\n ")
+        tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+        tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
+        tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+        tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
+
         tmp = c(mean(tableFCFS$ready_wait_time), 
                 mean(tableSJF$ready_wait_time), 
                 mean(tableRR$ready_wait_time), 
                 mean(tableSRTF$ready_wait_time))
         
         meanWaitingTimes[seq(i, length=length(tmp))] = tmp;
+        
+        aux <- aux + 1 
 }
 
 dim(meanWaitingTimes) = c(length(tmp),num_runs)
 
-colnames(meanWaitingTimes) <- paste0("Nº", 1:num_runs)               # column names
-rownames(meanWaitingTimes) <- paste0(c("FCFS", "SJF", "RR", "RTF")) # row names
+colnames(meanWaitingTimes) <- paste0("", 1:num_runs)              # column names
+meanWaitingTimes <- cbind(meanWaitingTimes, Mean = rowMeans(meanWaitingTimes[,]))    # column mean
+rownames(meanWaitingTimes) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
 
 #barplot:
 barplot(meanWaitingTimes, beside = T,  legend = TRUE, col = c("red","green", "yellow", "blue"),
-        xlab = "Runs",
-        ylab = "Average Waiting time",
-        main = "Comparative Sheduling Chart")
-#======================
+        xlab = "Processes",
+        ylab = "Average Waiting time (ms)",
+        main = "Waiting time")
 
+#==========================================================
+# Designed to evaluate the average turnaround time
+# according to the number of processes
+#==========================================================
 
+meanTatTimes <- c()
+num_runs = 100
+tmp = c(1,2,3,4)
+
+aux <- 1
+for (i in seq(1, by=length(tmp), length=num_runs)){
+        
+        eval_parameter <- aux 
+        
+        gen_workload(eval_parameter, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+        exec_simulator()
+        
+        #Collect Results from each
+        cat("# == collecting results ==\n ")
+        tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+        tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
+        tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+        tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
+        
+        tmp = c(mean(tableFCFS$tat), 
+                mean(tableSJF$tat), 
+                mean(tableRR$tat), 
+                mean(tableSRTF$tat))
+        
+        meanTatTimes[seq(i, length=length(tmp))] = tmp;
+        
+        aux <- aux + 1 #Change to exponential?
+}
+
+dim(meanTatTimes) = c(length(tmp),num_runs)
+
+colnames(meanTatTimes) <- paste0("", 1:num_runs)              # column names
+rownames(meanTatTimes) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
+
+#line plot:
+mt = as.data.frame(t(meanTatTimes))
+rownames(mt)=c("FCFS", "SJF", "RR", "SRTF")
+mt$processes <- rownames(mt)
+mt      <- melt(mt, id.vars=c("processes"))
+
+ggplot(mt, aes(x=as.numeric(processes), y=value, color=variable)) + 
+    geom_line(size = 1) + geom_point(fill = "white") + 
+    scale_shape_manual(values = c(22, 21))  + xlab("Processes") + 
+    ylab("Average Turnaround Time") + ggtitle("Average Turnaround Time")
 
