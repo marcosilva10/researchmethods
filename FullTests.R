@@ -17,15 +17,15 @@ MaxIO <- 0.5
 #Function to generate workload
 gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO){
     
-    cat("# == Generating Workload == \n")
-    cat(sprintf("# num_procs = %d\n", NumProcs))
-    cat(sprintf("# mean_io_bursts = %g\n", MeanIoBursts))
-    cat(sprintf("# mean_iat = %g\n", MeanIat))
-    cat(sprintf("# min_CPU = %g\n", MinCPU))
-    cat(sprintf("# max_CPU = %g\n", MaxCPU))
-    cat(sprintf("# min_IO = %g\n", MinIO))
-    cat(sprintf("# max_IO = %g\n", MaxIO))
-    cat("# ===================\n")
+#    cat("# == Generating Workload == \n")
+#    cat(sprintf("# num_procs = %d\n", NumProcs))
+#    cat(sprintf("# mean_io_bursts = %g\n", MeanIoBursts))
+#    cat(sprintf("# mean_iat = %g\n", MeanIat))
+#    cat(sprintf("# min_CPU = %g\n", MinCPU))
+#    cat(sprintf("# max_CPU = %g\n", MaxCPU))
+#    cat(sprintf("# min_IO = %g\n", MinIO))
+#    cat(sprintf("# max_IO = %g\n", MaxIO))
+#    cat("# ===================\n")
     
     createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
     info =  system(createTestStr, intern = TRUE)
@@ -36,13 +36,13 @@ gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO
 #Function to execute simulator.py
 exec_simulator <- function(){
     
-    cat("# == Execution simulator ==\n")
+    #cat("# == Execution simulator ==\n")
     
     #Run in 4 methods, need function to make it one line per file
     #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
     system("py simulator.py --cpu-scheduler fcfs --input-file testScript.txt --output-file ResultFiles/testResultFCFS.txt")
     system("py simulator.py --cpu-scheduler sjf  --input-file testScript.txt --output-file ResultFiles/testResultSJF.txt")
-    system("py simulator.py --cpu-scheduler rr   --quantum 1.0 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
+    system("py simulator.py --cpu-scheduler rr   --quantum 0.2 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
     system("py simulator.py --cpu-scheduler srtf --input-file testScript.txt --output-file ResultFiles/testResultSRTF.txt")
     
 }
@@ -51,6 +51,7 @@ plotBurstXTat <- function(tableToUse, schedulername, xmax, ymax) {
     
     xleg = "Bursts Time"
     yleg = "Turn around time"
+    
     
     plotRRWaitingTime <- plot(tableToUse$bursts_time, tableToUse$tat,
                               xlab = xleg,
@@ -76,7 +77,7 @@ tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = ""
 # ==== FCFS 
 
 # || PART 1 ||
-NumProcs <- 100
+NumProcs <- 50
 MeanIoBursts <- 10
 MeanIat <- 25
 MinCPU <- 1.0
@@ -113,14 +114,14 @@ ggplot(df, aes(x = cpu_bursts_time, y = ready_wait_time))+
     theme_bw()
 
 # || Part 2 ||
-NumProcs <- 10
+NumProcs <- 50
 MeanIoBursts <- 10
 MeanIat <- 25
-MinCPU <- 1.0
-MaxCPU <- 10.0
-MinIO <- 0.3
-MaxIO <- 0.5
-gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+MinCPULarge <- 2.0
+MaxCPULarge <- 10.0
+MinIOLarge <- 1.3
+MaxIOLarge <- 2.5
+gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
 exec_simulator()
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
 tableFCFSSmallProccess = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
@@ -272,7 +273,7 @@ ggplot(df, aes(x = time_quantum  , y = ready_wait_time))+
 #==========================================================
 
 meanWaitingTimes <- c()
-num_runs = 10
+num_runs = 2
 tmp = c(1,2,3,4)
 
 aux <- 1
@@ -284,7 +285,7 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     exec_simulator()
     
     #Collect Results from each
-    cat("# == collecting results ==\n ")
+    #cat("# == collecting results ==\n ")
     tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
     tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
     tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
@@ -318,34 +319,104 @@ barplot(meanWaitingTimes, beside = T,  legend = TRUE, col = c("red","green", "ye
 # according to the number of processes
 #==========================================================
 
-meanTatTimes <- c()
-num_runs = 100
+num_runs = 30
 tmp = c(1,2,3,4)
+meanTatTimes <- matrix(, nrow = num_runs, ncol = 4)
+meanBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
+sdTatTimes <- matrix(, nrow = num_runs, ncol = 4)
+sdBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
 
 aux <- 1
 for (i in seq(1, by=length(tmp), length=num_runs)){
     
     eval_parameter <- aux 
     
-    gen_workload(eval_parameter, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+    gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
     exec_simulator()
     
     #Collect Results from each
-    cat("# == collecting results ==\n ")
+    #cat("# == collecting results ==\n ")
     tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
     tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
     tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
     tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
     
-    tmp = c(mean(tableFCFS$tat), 
+    meanBurstTimes[aux,] = c(mean(tableFCFS$bursts_time), 
+                   mean(tableSJF$bursts_time), 
+                   mean(tableRR$bursts_time), 
+                   mean(tableSRTF$bursts_time))
+    
+    sdBurstTimes[aux,] = c(sd(tableFCFS$bursts_time), 
+                   sd(tableSJF$bursts_time), 
+                   sd(tableRR$bursts_time), 
+                   sd(tableSRTF$bursts_time))
+    
+    meanTatTimes[aux,] = c(mean(tableFCFS$tat), 
             mean(tableSJF$tat), 
             mean(tableRR$tat), 
             mean(tableSRTF$tat))
     
-    meanTatTimes[seq(i, length=length(tmp))] = tmp;
+    sdTatTimes[aux,] = c(sd(tableFCFS$tat), 
+                sd(tableSJF$tat), 
+                sd(tableRR$tat), 
+                sd(tableSRTF$tat))
     
     aux <- aux + 1 #Change to exponential?
 }
+
+t.test(meanTatTimes[,2], meanTatTimes[,3])
+
+#==========================================================
+# Same as the last run, but with larger bursts
+#==========================================================
+
+num_runs = 30
+meanLargeTests = c(1,2,3,4)
+meanLargeTatTimes <- matrix(, nrow = num_runs, ncol = 4)
+meanLargeBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
+sdLargeTatTimes <- matrix(, nrow = num_runs, ncol = 4)
+sdLargeBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
+
+aux <- 1
+for (i in seq(1, by=length(tmp), length=num_runs)){
+    
+    eval_parameter <- aux 
+    
+    gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
+    exec_simulator()
+    
+    #Collect Results from each
+    cat("# == collecting results ==\n ")
+    tableFCFSLarge = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
+    tableSJFLarge  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
+    tableRRLarge   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+    tableSRTFLarge = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
+    
+    meanLargeBurstTimes[aux,] = c(mean(tableFCFSLarge$bursts_time), 
+                             mean(tableSJFLarge$bursts_time), 
+                             mean(tableRRLarge$bursts_time), 
+                             mean(tableSRTFLarge$bursts_time))
+    
+    sdLargeBurstTimes[aux,] = c(sd(tableFCFSLarge$bursts_time), 
+                           sd(tableSJFLarge$bursts_time), 
+                           sd(tableRRLarge$bursts_time), 
+                           sd(tableSRTFLarge$bursts_time))
+    
+    meanLargeTatTimes[aux,] = c(mean(tableFCFSLarge$tat), 
+                           mean(tableSJFLarge$tat), 
+                           mean(tableRRLarge$tat), 
+                           mean(tableSRTFLarge$tat))
+    
+    sdLargeTatTimes[aux,] = c(sd(tableFCFSLarge$tat), 
+                         sd(tableSJFLarge$tat), 
+                         sd(tableRR$tat), 
+                         sd(tableSRTFLarge$tat))
+    
+    
+    aux <- aux + 1 #Change to exponential?
+}
+
+t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,3])
 
 dim(meanTatTimes) = c(length(tmp),num_runs)
 
