@@ -321,10 +321,10 @@ barplot(meanWaitingTimes, beside = T,  legend = TRUE, col = c("red","green", "ye
 
 num_runs = 30
 tmp = c(1,2,3,4)
-meanTatTimes <- matrix(, nrow = num_runs, ncol = 4)
-meanBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
-sdTatTimes <- matrix(, nrow = num_runs, ncol = 4)
-sdBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
+meanTatTimes <- matrix(nrow = num_runs, ncol = 4)
+meanBurstTimes <- matrix(nrow = num_runs, ncol = 4)
+sdTatTimes <- matrix(nrow = num_runs, ncol = 4)
+sdBurstTimes <- matrix(nrow = num_runs, ncol = 4)
 
 aux <- 1
 for (i in seq(1, by=length(tmp), length=num_runs)){
@@ -364,7 +364,18 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     aux <- aux + 1 #Change to exponential?
 }
 
-t.test(meanTatTimes[,2], meanTatTimes[,3])
+par(mfrow=c(2,2))
+hist(meanTatTimes[,1])
+hist(meanTatTimes[,2])
+hist(meanTatTimes[,3])
+hist(meanTatTimes[,4])
+
+
+print(t.test(meanTatTimes[,2], meanTatTimes[,3], alternative = "l"))
+
+
+res.man <- manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ meanBurstTimes[,1], data = iris)
+summary(res.man)
 
 #==========================================================
 # Same as the last run, but with larger bursts
@@ -416,7 +427,18 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     aux <- aux + 1 #Change to exponential?
 }
 
-t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,3])
+print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,3], alternative = "l"))
+
+
+par(mfrow=c(2,2))
+hist(meanLargeTatTimes[,1])
+hist(meanLargeTatTimes[,2])
+hist(meanLargeTatTimes[,3])
+hist(meanLargeTatTimes[,4])
+
+#==========================================================
+# Other Stats
+#==========================================================
 
 dim(meanTatTimes) = c(length(tmp),num_runs)
 
