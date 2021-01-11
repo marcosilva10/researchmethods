@@ -373,9 +373,8 @@ hist(meanTatTimes[,4])
 
 print(t.test(meanTatTimes[,2], meanTatTimes[,3], alternative = "l"))
 
-
 res.man <- manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ meanBurstTimes[,1], data = iris)
-summary(res.man)
+print(summary(res.man))
 
 #==========================================================
 # Same as the last run, but with larger bursts
