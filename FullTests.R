@@ -15,7 +15,7 @@ MinIO <- 0.3
 MaxIO <- 0.5
 
 #Function to generate workload
-gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO){
+gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, fileId){
     
 #    cat("# == Generating Workload == \n")
 #    cat(sprintf("# num_procs = %d\n", NumProcs))
@@ -29,21 +29,21 @@ gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO
     
     createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
     info =  system(createTestStr, intern = TRUE)
-    cat(info, file="testScript.txt", sep="\n")  
+    cat(info, file=cat("workload",fileId,".txt"), sep="\n")  
     invisible(info)
 }
 
 #Function to execute simulator.py
-exec_simulator <- function(){
+exec_simulator <- function(fileId){
     
     #cat("# == Execution simulator ==\n")
     
     #Run in 4 methods, need function to make it one line per file
     #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
-    system("py simulator.py --cpu-scheduler fcfs --input-file testScript.txt --output-file ResultFiles/testResultFCFS.txt")
-    system("py simulator.py --cpu-scheduler sjf  --input-file testScript.txt --output-file ResultFiles/testResultSJF.txt")
-    system("py simulator.py --cpu-scheduler rr   --quantum 0.2 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-    system("py simulator.py --cpu-scheduler srtf --input-file testScript.txt --output-file ResultFiles/testResultSRTF.txt")
+    system(paste("py simulator.py --cpu-scheduler fcfs --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultFCFS.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler sjf  --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSJF.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler rr   --quantum 0.2 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler srtf --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSRTF.txt", sep = ''))
     
 }
 
@@ -84,8 +84,8 @@ MinCPU <- 1.0
 MaxCPU <- 2.0
 MinIO <- 0.3
 MaxIO <- 0.5
-gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
-exec_simulator()
+#(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+exec_simulator("Default1")
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
 
 
@@ -121,8 +121,8 @@ MinCPULarge <- 2.0
 MaxCPULarge <- 10.0
 MinIOLarge <- 1.3
 MaxIOLarge <- 2.5
-gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
-exec_simulator()
+#gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
+exec_simulator("Large1")
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
 tableFCFSSmallProccess = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
 tableSJFSmallProccess  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
@@ -280,9 +280,9 @@ aux <- 1
 for (i in seq(1, by=length(tmp), length=num_runs)){
     
     eval_parameter <- aux 
-    
-    gen_workload(eval_parameter, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
-    exec_simulator()
+    fileId = paste("Default",aux, sep = '')
+    #gen_workload(eval_parameter, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, fileId)
+    exec_simulator(fileId)
     
     #Collect Results from each
     #cat("# == collecting results ==\n ")
@@ -331,8 +331,9 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     
     eval_parameter <- aux 
     
-    gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
-    exec_simulator()
+    fileId = paste("Default", aux, sep = '')
+    #gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
+    exec_simulator(fileId)
     
     #Collect Results from each
     #cat("# == collecting results ==\n ")
@@ -365,16 +366,17 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
 }
 
 par(mfrow=c(2,2))
-hist(meanTatTimes[,1])
-hist(meanTatTimes[,2])
-hist(meanTatTimes[,3])
-hist(meanTatTimes[,4])
+xEndHist = (max(meanTatTimes[,]))+10
+hist(meanTatTimes[,1], seq(0, xEndHist, 10))
+hist(meanTatTimes[,2], seq(0, xEndHist, 10))
+hist(meanTatTimes[,3], seq(0, xEndHist, 10))
+hist(meanTatTimes[,4], seq(0, xEndHist, 10))
 
 
-print(t.test(meanTatTimes[,2], meanTatTimes[,3], alternative = "l"))
+#print(t.test(meanTatTimes[,2], meanTatTimes[,3], alternative = "l"))
 
-res.man <- manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ meanBurstTimes[,1], data = iris)
-print(summary(res.man))
+print(summary(manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ meanBurstTimes[,1])))
+
 
 #==========================================================
 # Same as the last run, but with larger bursts
@@ -392,8 +394,9 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     
     eval_parameter <- aux 
     
-    gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
-    exec_simulator()
+    fileId = paste("Large", aux, sep = '')
+    #gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
+    exec_simulator(fileId)
     
     #Collect Results from each
     cat("# == collecting results ==\n ")
@@ -427,22 +430,27 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
 }
 
 print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,3], alternative = "l"))
+print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,1], alternative = "l"))
+print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,4], alternative = "l"))
 
 
 par(mfrow=c(2,2))
-hist(meanLargeTatTimes[,1])
-hist(meanLargeTatTimes[,2])
-hist(meanLargeTatTimes[,3])
-hist(meanLargeTatTimes[,4])
+xEndHist = (max(meanLargeTatTimes[,]))+10
+hist(meanLargeTatTimes[,1], seq(0, xEndHist, 10))
+hist(meanLargeTatTimes[,2], seq(0, xEndHist, 10))
+hist(meanLargeTatTimes[,3], seq(0, xEndHist, 10))
+hist(meanLargeTatTimes[,4], seq(0, xEndHist, 10))
 
 #==========================================================
 # Other Stats
 #==========================================================
 
-dim(meanTatTimes) = c(length(tmp),num_runs)
 
-colnames(meanTatTimes) <- paste0("", 1:num_runs)              # column names
-rownames(meanTatTimes) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
+meanTatTimesCpy <- meanTatTimes
+dim(meanTatTimesCpy) = c(length(tmp),num_runs)
+
+colnames(meanTatTimesCpy) <- paste0("", 1:num_runs)              # column names
+rownames(meanTatTimesCpy) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
 
 #line plot:
 mt = as.data.frame(t(meanTatTimes))
