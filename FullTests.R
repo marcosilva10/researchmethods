@@ -42,7 +42,7 @@ exec_simulator <- function(fileId){
     #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
     system(paste("py simulator.py --cpu-scheduler fcfs --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultFCFS.txt", sep = ''))
     system(paste("py simulator.py --cpu-scheduler sjf  --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSJF.txt", sep = ''))
-    system(paste("py simulator.py --cpu-scheduler rr   --quantum 0.2 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler rr   --quantum 1 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
     system(paste("py simulator.py --cpu-scheduler srtf --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSRTF.txt", sep = ''))
     
 }
@@ -366,16 +366,18 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
 }
 
 par(mfrow=c(2,2))
+xLabel = "Turn Around Time"
 xEndHist = (max(meanTatTimes[,]))+10
-hist(meanTatTimes[,1], seq(0, xEndHist, 10))
-hist(meanTatTimes[,2], seq(0, xEndHist, 10))
-hist(meanTatTimes[,3], seq(0, xEndHist, 10))
-hist(meanTatTimes[,4], seq(0, xEndHist, 10))
+hist(meanTatTimes[,1], xlab = xLabel, main = "FCFS", seq(0, xEndHist, 10))
+hist(meanTatTimes[,2], xlab = xLabel, main = "SJF", seq(0, xEndHist, 10))
+hist(meanTatTimes[,3], xlab = xLabel, main = "RR", seq(0, xEndHist, 10))
+hist(meanTatTimes[,4], xlab = xLabel, main = "SRTF", seq(0, xEndHist, 10))
 
 
 #print(t.test(meanTatTimes[,2], meanTatTimes[,3], alternative = "l"))
-
-print(summary(manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ meanBurstTimes[,1])))
+cat("SD comparison for ANOVA", mean(sdTatTimes[,1]), mean(sdTatTimes[,2]), mean(sdTatTimes[,3]), mean(sdTatTimes[,4]))
+BurstTimes = meanBurstTimes[,1]
+print(summary(manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ BurstTimes)))
 
 
 #==========================================================
@@ -435,11 +437,14 @@ print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,4], alternative = "l"))
 
 
 par(mfrow=c(2,2))
-xEndHist = (max(meanLargeTatTimes[,]))+10
-hist(meanLargeTatTimes[,1], seq(0, xEndHist, 10))
-hist(meanLargeTatTimes[,2], seq(0, xEndHist, 10))
-hist(meanLargeTatTimes[,3], seq(0, xEndHist, 10))
-hist(meanLargeTatTimes[,4], seq(0, xEndHist, 10))
+xLabel = "Turnaround Time"
+xEndHist = (max(meanLargeTatTimes[,]))+100
+xStartHist = (min(meanLargeTatTimes[,]))-100
+
+hist(meanLargeTatTimes[,1], xlab = xLabel, main = "FCFS", seq(xStartHist, xEndHist, 100))
+hist(meanLargeTatTimes[,2], xlab = xLabel, main = "SJF", seq(xStartHist, xEndHist, 100))
+hist(meanLargeTatTimes[,3], xlab = xLabel, main = "RR", seq(xStartHist, xEndHist, 100))
+hist(meanLargeTatTimes[,4], xlab = xLabel, main = "SRTF", seq(xStartHist, xEndHist, 100))
 
 #==========================================================
 # Other Stats
