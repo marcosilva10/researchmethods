@@ -268,54 +268,7 @@ ggplot(df, aes(x = time_quantum  , y = ready_wait_time))+
     theme_bw()
 
 #==========================================================
-# Designed to evaluate the waiting time
-# according to the number of processes
-#==========================================================
-
-meanWaitingTimes <- c()
-num_runs = 2
-tmp = c(1,2,3,4)
-
-aux <- 1
-for (i in seq(1, by=length(tmp), length=num_runs)){
-    
-    eval_parameter <- aux 
-    fileId = paste("Default",aux, sep = '')
-    #gen_workload(eval_parameter, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, fileId)
-    exec_simulator(fileId)
-    
-    #Collect Results from each
-    #cat("# == collecting results ==\n ")
-    tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-    tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
-    tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-    tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
-    
-    tmp = c(mean(tableFCFS$ready_wait_time), 
-            mean(tableSJF$ready_wait_time), 
-            mean(tableRR$ready_wait_time), 
-            mean(tableSRTF$ready_wait_time))
-    
-    meanWaitingTimes[seq(i, length=length(tmp))] = tmp;
-    
-    aux <- aux + 1 
-}
-
-dim(meanWaitingTimes) = c(length(tmp),num_runs)
-
-colnames(meanWaitingTimes) <- paste0("", 1:num_runs)              # column names
-meanWaitingTimes <- cbind(meanWaitingTimes, Mean = rowMeans(meanWaitingTimes[,]))    # column mean
-rownames(meanWaitingTimes) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
-
-#barplot:
-barplot(meanWaitingTimes, beside = T,  legend = TRUE, col = c("red","green", "yellow", "blue"),
-        xlab = "Processes",
-        ylab = "Average Waiting time (ms)",
-        main = "Waiting time")
-
-
-#==========================================================
-# Designed to evaluate the average turnaround time
+# Designed to evaluate the average turnaround time and waiting time
 # according to the number of processes
 #==========================================================
 
@@ -325,6 +278,7 @@ meanTatTimes <- matrix(nrow = num_runs, ncol = 4)
 meanBurstTimes <- matrix(nrow = num_runs, ncol = 4)
 sdTatTimes <- matrix(nrow = num_runs, ncol = 4)
 sdBurstTimes <- matrix(nrow = num_runs, ncol = 4)
+meanWaitingTimes <- matrix(nrow = num_runs, ncol = 4)
 
 aux <- 1
 for (i in seq(1, by=length(tmp), length=num_runs)){
@@ -362,8 +316,28 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
                 sd(tableRR$tat), 
                 sd(tableSRTF$tat))
     
+    meanWaitingTimes[aux,] = c(mean(tableFCFS$ready_wait_time), 
+            mean(tableSJF$ready_wait_time), 
+            mean(tableRR$ready_wait_time), 
+            mean(tableSRTF$ready_wait_time))
+    
     aux <- aux + 1 #Change to exponential?
 }
+
+#barplot:
+
+dim(meanWaitingTimes) = c(length(tmp),num_runs)
+
+colnames(meanWaitingTimes) <- paste0("", 1:num_runs)              # column names
+meanWaitingTimes <- cbind(meanWaitingTimes, Mean = rowMeans(meanWaitingTimes[,]))    # column mean
+rownames(meanWaitingTimes) <- paste0(c("FCFS", "SJF", "RR", "SRTF")) # row names
+
+barplot(meanWaitingTimes, beside = T,  legend = TRUE, col = c("red","green", "yellow", "blue"),
+        xlab = "Processes",
+        ylab = "Average Waiting time (ms)",
+        main = "Waiting time")
+
+#========= HISTOGRAM AND ANOVA ===================
 
 par(mfrow=c(2,2))
 xLabel = "Turn Around Time"
@@ -518,7 +492,7 @@ ggplot(df, aes(x = bursts_time, y = tat)) +
 
 #=======================
 #Small proccess
-#=========================
+#=======================
 
 par(mfrow=c(2,2))
 
@@ -531,3 +505,17 @@ plotBurstXTat(tableSJFSmallProccess, "Shortest Job First", xmax, ymax)
 plotBurstXTat(tableSRTFSmallProccess, "Shortest Remaining Time First", xmax, ymax)
 
 mtext("Small 10 proccess", outer = TRUE, cex = 1.5)
+
+
+#=========================
+# Regression Analysis
+#=========================
+
+lrFCFS.out = lm(meanBurstTimes~meanWaitingTimes[1,1:30])
+lrSJF.out = lm(meanBurstTimes~meanWaitingTimes[2,1:30])
+lrRR.out = lm(meanBurstTimes~meanWaitingTimes[3,1:30])
+lrSRTF.out = lm(meanBurstTimes~meanWaitingTimes[4,1:30])
+summary(lrFCFS.out)
+summary(lrSJF.out)
+summary(lrRR.out)
+summary(lrSRTF.out)
