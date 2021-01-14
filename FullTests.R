@@ -4,7 +4,6 @@ library(tidyr)
 library(dplyr)
 library(reshape)
 
-#Produce Workloads, need function to run it changing parameters
 #Defaul and initial values
 NumProcs <- 50
 MeanIoBursts <- 10
@@ -17,16 +16,7 @@ MaxIO <- 0.5
 #Function to generate workload
 gen_workload <- function (NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, fileId){
     
-#    cat("# == Generating Workload == \n")
-#    cat(sprintf("# num_procs = %d\n", NumProcs))
-#    cat(sprintf("# mean_io_bursts = %g\n", MeanIoBursts))
-#    cat(sprintf("# mean_iat = %g\n", MeanIat))
-#    cat(sprintf("# min_CPU = %g\n", MinCPU))
-#    cat(sprintf("# max_CPU = %g\n", MaxCPU))
-#    cat(sprintf("# min_IO = %g\n", MinIO))
-#    cat(sprintf("# max_IO = %g\n", MaxIO))
-#    cat("# ===================\n")
-    
+    #cat("# == Generating Workload == \n")
     createTestStr =  paste("Rscript gen_workload.R", NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO, sep = " ")
     info =  system(createTestStr, intern = TRUE)
     cat(info, file=cat("workload",fileId,".txt"), sep="\n")  
@@ -40,13 +30,23 @@ exec_simulator <- function(fileId){
     
     #Run in 4 methods, need function to make it one line per file
     #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
-    system(paste("py simulator.py --cpu-scheduler fcfs --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultFCFS.txt", sep = ''))
-    system(paste("py simulator.py --cpu-scheduler sjf  --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSJF.txt", sep = ''))
-    system(paste("py simulator.py --cpu-scheduler rr   --quantum 1 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
-    system(paste("py simulator.py --cpu-scheduler srtf --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSRTF.txt", sep = ''))
+    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler fcfs --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultFCFS.txt", sep = ''))
+    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler sjf  --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSJF.txt", sep = ''))
+    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler rr   --quantum 1 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
+    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler srtf --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSRTF.txt", sep = ''))
     
 }
 
+#Function to execute RR algorithm only
+exec_rr <- function(quantumValue, fileId){
+    
+    cat("# == Execution RR simulator ==", quantumValue, "\n")
+    
+    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler rr   --quantum ", quantumValue," --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
+    
+}
+
+#function to plot
 plotBurstXTat <- function(tableToUse, schedulername, xmax, ymax) {
     
     xleg = "Bursts Time"
@@ -62,210 +62,161 @@ plotBurstXTat <- function(tableToUse, schedulername, xmax, ymax) {
     
     abline(lm(tat ~ bursts_time, data = tableToUse), col = "blue")
 }
-# ============= Collect Results from each ============
-tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
-tableRR   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-tableSRTF = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
-
-# ========== CPU Burst VS Waiting Time ========
-# = compare long jobs with shorter ones
-# = Part 1 - COmpare a mix of short and long jobs 
-# = Part 2 - fewer processes but longer
-# = Should this be done for each algorithm individually?==
-
-# ==== FCFS 
-
-# || PART 1 ||
-NumProcs <- 50
-MeanIoBursts <- 10
-MeanIat <- 25
-MinCPU <- 1.0
-MaxCPU <- 2.0
-MinIO <- 0.3
-MaxIO <- 0.5
-#(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
-exec_simulator("Default1")
-tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-
-
-tableFCFSLargeProccess = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-tableSJFLargeProccess  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
-tableRRLargeProccess   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-tableSRTFLargeProccess = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
-
-df = data.frame(cpu_bursts_time = tableFCFS$cpu_bursts_time, ready_wait_time = tableFCFS$ready_wait_time)
-df$data <- 'FCFS'
-# Cpu Burst Distibution
-ggplot(df, aes(x = 1:nrow(df), y = cpu_bursts_time))+
-    geom_line(aes(colour = data), size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="Process", breaks=seq(0,400,20)) +
-    scale_y_continuous(name="CPU Total Burst (sec)", breaks=seq(0,100,5)) + 
-    ggtitle("Cpu Burst Distibution")+
-    theme_bw()
-# Waiting Time
-ggplot(df, aes(x = cpu_bursts_time, y = ready_wait_time))+
-    geom_line(aes(colour = data), size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="CPU Burst", breaks=seq(0,50,1)) +
-    scale_y_continuous(name="Waiting Time (sec)", breaks=seq(0,100,5)) + 
-    ggtitle("Waiting Time")+
-    theme_bw()
-
-# || Part 2 ||
-NumProcs <- 50
-MeanIoBursts <- 10
-MeanIat <- 25
-MinCPULarge <- 2.0
-MaxCPULarge <- 10.0
-MinIOLarge <- 1.3
-MaxIOLarge <- 2.5
-#gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPULarge, MaxCPULarge, MinIOLarge, MaxIOLarge)
-exec_simulator("Large1")
-tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-tableFCFSSmallProccess = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-tableSJFSmallProccess  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
-tableRRSmallProccess   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-tableSRTFSmallProccess = read.table("ResultFiles/testResultSRTF.txt", header = TRUE, sep = "", dec = ".")
-
-df = data.frame(cpu_bursts_time = tableFCFS$cpu_bursts_time, ready_wait_time = tableFCFS$ready_wait_time)
-df$data <- 'FCFS'
-# Cpu Burst Distibution
-ggplot(df, aes(x = 1:nrow(df), y = cpu_bursts_time))+
-    geom_line(aes(colour = data), size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="Process", breaks=seq(0,400,20)) +
-    scale_y_continuous(name="CPU Total Burst (sec)", breaks=seq(0,100,5)) + 
-    ggtitle("Cpu Burst Distibution")+
-    theme_bw()
-# Waiting Time
-ggplot(df, aes(x = cpu_bursts_time, y = ready_wait_time))+
-    geom_line(aes(colour = data), size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="CPU Burst", breaks=seq(0,100,5)) +
-    scale_y_continuous(name="Waiting Time (sec)", breaks=seq(0,300,15)) + 
-    ggtitle("Waiting Time")+
-    theme_bw()
-#========= Compare same workload with SJF results =========
-# SJF scheduling tends to result in increased waiting times
-
-tableSJF = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
-
-# turnaround time
-df1 = data.frame(cpu_bursts_time = tableFCFS$cpu_bursts_time, tat = tableFCFS$tat)
-df2 = data.frame(cpu_bursts_time = tableSJF$cpu_bursts_time, tat = tableSJF$tat)
-df1$data <- 'FCFS'
-df2$data <- 'SJF'
-
-df <- rbind.data.frame(df1,df2)
-
-ggplot(df, aes(x = cpu_bursts_time, y = tat))+
-    geom_line(aes(colour = data), size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="CPU Burst", breaks=seq(0,100,5)) +
-    scale_y_continuous(name="Time (sec)", breaks=seq(0,300,15)) + 
-    ggtitle("Turnaround Time")+
-    theme_bw()
-
-# waiting time
-
-df1 = data.frame(cpu_bursts_time = tableFCFS$cpu_bursts_time, ready_wait_time = tableFCFS$ready_wait_time)
-df2 = data.frame(cpu_bursts_time = tableSJF$cpu_bursts_time, ready_wait_time = tableSJF$ready_wait_time)
-df1$data <- 'FCFS'
-df2$data <- 'SJF'
-
-df <- rbind.data.frame(df1,df2)
-
-ggplot(df, aes(x = cpu_bursts_time, y = ready_wait_time))+
-    geom_line(aes(colour = data), size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="CPU Burst", breaks=seq(0,100,5)) +
-    scale_y_continuous(name="Time (sec)", breaks=seq(0,300,15)) + 
-    ggtitle("Waiting Time")+
-    theme_bw()
-
 
 #=========== Evaluate quantum time ==============
-#0.1, 0.2, 0.3, 0.4, 0.5, 0.75
-# 1, 2.25, 5, 7.5, 10, 15, 20
-# 30, 40, 50, 60
-system("py simulator.py --cpu-scheduler rr   --quantum 0.1 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ0.1   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 0.2 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ0.2   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 0.3 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ0.3   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 0.4 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ0.4   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 0.5 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ0.5   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 0.75 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ0.75   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 1 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ1   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 2.25 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ2.25   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 5 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ5   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 7.5 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ7.5   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 10 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ10   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 15 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ15   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 20 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ20   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 30 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ30   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 40 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ40   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
-system("py simulator.py --cpu-scheduler rr   --quantum 60 --input-file testScript.txt --output-file ResultFiles/testResultRR.txt")
-tableRRQ60   = read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")
+quantum_values <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 2.25, 5, 7.5, 10, 20)
 
-df0.1 = data.frame(time_quantum = 0.1, ready_wait_time = mean(tableRRQ0.1$ready_wait_time))
-df0.2 = data.frame(time_quantum = 0.2, ready_wait_time = mean(tableRRQ0.2$ready_wait_time))
-df0.3 = data.frame(time_quantum = 0.3, ready_wait_time = mean(tableRRQ0.3$ready_wait_time))
-df0.4 = data.frame(time_quantum = 0.4, ready_wait_time = mean(tableRRQ0.4$ready_wait_time))
-df0.5 = data.frame(time_quantum = 0.5, ready_wait_time = mean(tableRRQ0.5$ready_wait_time))
-df0.75 = data.frame(time_quantum = 0.75,ready_wait_time = mean(tableRRQ0.75$ready_wait_time))
-df1 =    data.frame(time_quantum = 1,   ready_wait_time = mean(tableRRQ1$ready_wait_time))
-df2.25 = data.frame(time_quantum = 2.5, ready_wait_time = mean(tableRRQ2.25$ready_wait_time))
-df5 =    data.frame(time_quantum = 5,   ready_wait_time = mean(tableRRQ5$ready_wait_time))
-df7.5 =  data.frame(time_quantum = 7,5, ready_wait_time = mean(tableRRQ7.5$ready_wait_time))
-df10 = data.frame(time_quantum = 10, ready_wait_time = mean(tableRRQ10$ready_wait_time))
-df15 = data.frame(time_quantum = 15, ready_wait_time = mean(tableRRQ15$ready_wait_time))
-df20 = data.frame(time_quantum = 20, ready_wait_time = mean(tableRRQ20$ready_wait_time))
-df30 = data.frame(time_quantum = 30, ready_wait_time = mean(tableRRQ30$ready_wait_time))
-df40 = data.frame(time_quantum = 40, ready_wait_time = mean(tableRRQ40$ready_wait_time))
-df60 = data.frame(time_quantum = 60, ready_wait_time = mean(tableRRQ60$ready_wait_time))
+num_runs = 50
+#Create variables
+for(i in 1:length(quantum_values)) { 
+    nam <- paste("meanWaitingTimestableRRQ", quantum_values[i], sep = "")
+    assign(nam, matrix(nrow = num_runs, ncol = 1))
+    nam <- paste("meanTatTimestableRRQ", quantum_values[i], sep = "")
+    assign(nam, matrix(nrow = num_runs, ncol = 1))
+    nam <- paste("sdWaitingTimestableRRQ", quantum_values[i], sep = "")
+    assign(nam, matrix(nrow = num_runs, ncol = 1))
+    nam <- paste("sdTatTimestableRRQ", quantum_values[i], sep = "")
+    assign(nam, matrix(nrow = num_runs, ncol = 1))
+}
 
-df0.1$quantum <- '0.1'
-df0.2$quantum <- '0.2'
-df0.3$quantum <- '0.3'
-df0.4$quantum <- '0.4'
-df0.5$quantum <- '0.5'
-df0.75$quantum <- '0.75'
-df1$quantum <- '1'
-df2.25$quantum <- '2.25'
-df5$quantum <- '5'
-df7.5$quantum <- '7.5'
-df10$quantum <- '10'
-df15$quantum <- '15'
-df20$quantum <- '20'
-df30$quantum <- '30'
-df40$quantum <- '40'
-df60$quantum <- '60'
+#Execute simulator
+aux <- 1
+for (i in seq(1, by=length(11), length=num_runs)){
+    
+    #fileId = paste("Default", aux, sep = '')
+    fileId = paste("Large", aux, sep = '')
+    #====================
+    cat("# == Execution simulator ==\n")
+    exec_rr(0.1,fileId)
+    meanWaitingTimestableRRQ0.1[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ0.1[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ0.1[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ0.1[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(0.2,fileId)
+    meanWaitingTimestableRRQ0.2[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ0.2[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ0.2[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ0.2[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(0.3,fileId)
+    meanWaitingTimestableRRQ0.3[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ0.3[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ0.3[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ0.3[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(0.4,fileId)
+    meanWaitingTimestableRRQ0.4[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ0.4[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ0.4[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ0.4[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(0.5,fileId)
+    meanWaitingTimestableRRQ0.5[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ0.5[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ0.5[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ0.5[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(0.75,fileId)
+    meanWaitingTimestableRRQ0.75[aux,]  = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ0.75[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ0.75[aux,]  = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ0.75[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(1,fileId)
+    meanWaitingTimestableRRQ1[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ1[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ1[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ1[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(2.25,fileId)
+    meanWaitingTimestableRRQ2.25[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ2.25[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ2.25[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ2.25[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(5,fileId)
+    meanWaitingTimestableRRQ5[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ5[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ5[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ5[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(7.5,fileId)
+    meanWaitingTimestableRRQ7.5[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ7.5[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ7.5[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ7.5[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(10,fileId)
+    meanWaitingTimestableRRQ10[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ10[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ10[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ10[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    exec_rr(20,fileId)
+    meanWaitingTimestableRRQ20[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    sdWaitingTimestableRRQ20[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$ready_wait_time)))
+    meanTatTimestableRRQ20[aux,]   = c(mean((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    sdTatTimestableRRQ20[aux,]   = c(sd((read.table("ResultFiles/testResultRR.txt", header = TRUE, sep = "", dec = ".")$tat)))
+    
+    #===================
+    aux <- aux + 1
+}
 
-df <- bind_rows(df0.1,df0.2,df0.3,df0.4,df0.5,df0.75,df1,df2.25,df5,df7.5,df10,df15,df20,df30,df40,df60)
+df0.1 = data.frame(time_quantum = 0.1,
+                   ready_wait_time = mean(meanWaitingTimestableRRQ0.1), tat = mean(meanTatTimestableRRQ0.1), 
+                   sd_ready_wait_time = mean(sdWaitingTimestableRRQ0.1), sd_tat = mean(sdTatTimestableRRQ0.1))
+
+df0.2 = data.frame(time_quantum = 0.2,  ready_wait_time = mean(meanWaitingTimestableRRQ0.2), tat = mean(meanTatTimestableRRQ0.2), 
+                   sd_ready_wait_time = mean(sdWaitingTimestableRRQ0.2), sd_tat = mean(sdTatTimestableRRQ0.2))
+
+df0.3 = data.frame(time_quantum = 0.3,  ready_wait_time = mean(meanWaitingTimestableRRQ0.3), tat = mean(meanTatTimestableRRQ0.3),
+                   sd_ready_wait_time = mean(sdWaitingTimestableRRQ0.3), sd_tat = mean(sdTatTimestableRRQ0.3))
+
+df0.4 = data.frame(time_quantum = 0.4,  ready_wait_time = mean(meanWaitingTimestableRRQ0.4), tat = mean(meanTatTimestableRRQ0.4),
+                   sd_ready_wait_time = mean(sdWaitingTimestableRRQ0.4), sd_tat = mean(sdTatTimestableRRQ0.4))
+
+df0.5 = data.frame(time_quantum = 0.5,  ready_wait_time = mean(meanWaitingTimestableRRQ0.5),
+                   tat = mean(meanTatTimestableRRQ0.5),  sd_ready_wait_time = mean(sdWaitingTimestableRRQ0.5), sd_tat = mean(sdTatTimestableRRQ0.5))
+
+df0.75= data.frame(time_quantum = 0.75,ready_wait_time = mean(meanWaitingTimestableRRQ0.75),
+                   tat = mean(meanTatTimestableRRQ0.75),  sd_ready_wait_time = mean(sdWaitingTimestableRRQ0.75), sd_tat = mean(sdTatTimestableRRQ0.75))
+
+df1 =   data.frame(time_quantum = 1,   ready_wait_time = mean(meanWaitingTimestableRRQ1),
+                   tat = mean(meanTatTimestableRRQ1), sd_ready_wait_time = mean(sdWaitingTimestableRRQ1), sd_tat = mean(sdTatTimestableRRQ1))
+
+df2.25= data.frame(time_quantum = 2.5, ready_wait_time = mean(meanWaitingTimestableRRQ2.25),
+                   tat = mean(meanTatTimestableRRQ2.25), sd_ready_wait_time = mean(sdWaitingTimestableRRQ2.25), sd_tat = mean(sdTatTimestableRRQ2.25))
+
+df5 =   data.frame(time_quantum = 5,   ready_wait_time = mean(meanWaitingTimestableRRQ5),
+                   tat = mean(meanTatTimestableRRQ5),  sd_ready_wait_time = mean(sdWaitingTimestableRRQ5), sd_tat = mean(sdTatTimestableRRQ5))
+
+df7.5 = data.frame(time_quantum = 7,5, ready_wait_time = mean(meanWaitingTimestableRRQ7.5),
+                   tat = mean(meanTatTimestableRRQ7.5),  sd_ready_wait_time = mean(sdWaitingTimestableRRQ7.5), sd_tat = mean(sdTatTimestableRRQ7.5))
+
+df10 =  data.frame(time_quantum = 10,    ready_wait_time = mean(meanWaitingTimestableRRQ10),
+                   tat = mean(meanTatTimestableRRQ10),  sd_ready_wait_time = mean(sdWaitingTimestableRRQ10), sd_tat = mean(sdTatTimestableRRQ10))
+
+df20 =  data.frame(time_quantum = 20,    ready_wait_time = mean(meanWaitingTimestableRRQ20),
+                   tat = mean(meanTatTimestableRRQ20),  sd_ready_wait_time = mean(sdWaitingTimestableRRQ20), sd_tat = mean(sdTatTimestableRRQ20))
+
+df <- bind_rows(df0.1,df0.2,df0.3,df0.4,df0.5,df0.75,df1,df2.25,df5,df7.5,df10,df20)
 
 ggplot(df, aes(x = time_quantum  , y = ready_wait_time))+
     geom_line(size = 1)+
-    geom_point(colour = 'royalblue', size = 2)+
-    scale_x_continuous(name="Time Quantum (sec)",breaks=seq(1,60,5)) +
-    scale_y_continuous(name="Average Waiting Time (sec)") + 
-    ggtitle("Quantum Waiting Time")+
+    geom_point(colour = 'royalblue', size = 2) +
+    scale_x_continuous(name="Time Quantum (ms)",breaks=seq(1,max(df$time_quantum),1)) +
+    scale_y_continuous(name="Average Waiting Time (ms)") + 
     theme_bw()
+
+# Turnaround time
+ggplot(df, aes(x = time_quantum  , y = tat))+
+    geom_line(size = 1)+
+    geom_point(colour = 'royalblue', size = 2)+
+    scale_x_continuous(name="Time Quantum (ms)",breaks=seq(1,max(df$time_quantum),1)) +
+    scale_y_continuous(name="Average Turnaround Time (ms)") + 
+    theme_bw()
+
 
 #==========================================================
 # Designed to evaluate the average turnaround time and waiting time
