@@ -62,6 +62,22 @@ plotBurstXTat <- function(tableToUse, schedulername, xmax, ymax) {
     
     abline(lm(tat ~ bursts_time, data = tableToUse), col = "blue")
 }
+
+plotBurstXWaiting <- function(independentVars, responseVars, schedulername, xmax, ymax, xmin, ymin) {
+    
+    xleg = "Bursts Time"
+    yleg = "Total Waiting Time"
+    
+    
+    plotRRWaitingTime <- plot(independentVars, responseVars,
+                              xlab = xleg,
+                              ylab = yleg,
+                              main = schedulername,
+                              ylim = c(ymin, ymax),
+                              xlim = c(xmin, xmax))
+    
+    abline(lm(responseVars ~ independentVars), col = "blue")
+}
 # ============= Collect Results from each ============
 tableFCFS = read.table("ResultFiles/testResultFCFS.txt", header = TRUE, sep = "", dec = ".")
 tableSJF  = read.table("ResultFiles/testResultSJF.txt", header = TRUE, sep = "", dec = ".")
@@ -364,6 +380,7 @@ meanLargeTatTimes <- matrix(, nrow = num_runs, ncol = 4)
 meanLargeBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
 sdLargeTatTimes <- matrix(, nrow = num_runs, ncol = 4)
 sdLargeBurstTimes <- matrix(, nrow = num_runs, ncol = 4)
+meanLargeWaitingTimes <- matrix(nrow = num_runs, ncol = 4)
 
 aux <- 1
 for (i in seq(1, by=length(tmp), length=num_runs)){
@@ -398,8 +415,13 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     
     sdLargeTatTimes[aux,] = c(sd(tableFCFSLarge$tat), 
                          sd(tableSJFLarge$tat), 
-                         sd(tableRR$tat), 
+                         sd(tableRRLarge$tat), 
                          sd(tableSRTFLarge$tat))
+    
+    meanLargeWaitingTimes[aux,] = c(mean(tableFCFSLarge$ready_wait_time), 
+                               mean(tableSJFLarge$ready_wait_time), 
+                               mean(tableRRLarge$ready_wait_time), 
+                               mean(tableSRTFLarge$ready_wait_time))
     
     
     aux <- aux + 1 #Change to exponential?
@@ -511,11 +533,110 @@ mtext("Small 10 proccess", outer = TRUE, cex = 1.5)
 # Regression Analysis
 #=========================
 
-lrFCFS.out = lm(meanBurstTimes~meanWaitingTimes[1,1:30])
-lrSJF.out = lm(meanBurstTimes~meanWaitingTimes[2,1:30])
-lrRR.out = lm(meanBurstTimes~meanWaitingTimes[3,1:30])
-lrSRTF.out = lm(meanBurstTimes~meanWaitingTimes[4,1:30])
-summary(lrFCFS.out)
-summary(lrSJF.out)
-summary(lrRR.out)
-summary(lrSRTF.out)
+# ================= PLOT LARGE =========================
+
+par(mfrow=c(2,2))
+
+ymax  = max(meanLargeWaitingTimes[,])*1.1
+xmax = max(meanLargeBurstTimes[,])*1.1
+ymin  = min(meanLargeWaitingTimes[,])*0.9
+xmin = min(meanLargeBurstTimes[,])*0.9
+
+plotBurstXWaiting(meanLargeBurstTimes[1:30,1],meanLargeWaitingTimes[1:30,1], "Round Robin", xmax, ymax, xmin, ymin)
+plotBurstXWaiting(meanLargeBurstTimes[1:30,2],meanLargeWaitingTimes[1:30,2], "First Come First Served", xmax, ymax, xmin, ymin)
+plotBurstXWaiting(meanLargeBurstTimes[1:30,3],meanLargeWaitingTimes[1:30,3], "Shortest Job First", xmax, ymax, xmin, ymin)
+plotBurstXWaiting(meanLargeBurstTimes[1:30,4],meanLargeWaitingTimes[1:30,4], "Shortest Remaining Time First", xmax, ymax, xmin, ymin)
+
+mtext("LBWB", line = 4, adj = -0.4 , cex = 1.5)
+
+#================== PLOT SMALL ======================
+
+par(mfrow=c(2,2))
+
+ymax  = max(meanWaitingTimes[,])*1.1
+xmax = max(meanBurstTimes[,])*1.1
+ymin  = min(meanWaitingTimes[,])*0.9
+xmin = min(meanBurstTimes[,])*0.9
+
+plotBurstXWaiting(meanBurstTimes[1:30,1],meanWaitingTimes[1,1:30], "Round Robin", xmax, ymax, xmin, ymin)
+plotBurstXWaiting(meanBurstTimes[1:30,2],meanWaitingTimes[2,1:30], "First Come First Served", xmax, ymax, xmin, ymin)
+plotBurstXWaiting(meanBurstTimes[1:30,3],meanWaitingTimes[3,1:30], "Shortest Job First", xmax, ymax, xmin, ymin)
+plotBurstXWaiting(meanBurstTimes[1:30,4],meanWaitingTimes[4,1:30], "Shortest Remaining Time First", xmax, ymax, xmin, ymin)
+
+mtext("DPWB", line = 4, adj = -0.4 , cex = 1.5)
+
+#============================== SMALL REGRESSION ======================================
+
+lrFCFS.out = lm(meanBurstTimes[1:30,1]~meanWaitingTimes[1,1:30])
+lrSJF.out = lm(meanBurstTimes[1:30,2]~meanWaitingTimes[2,1:30])
+lrRR.out = lm(meanBurstTimes[1:30,3]~meanWaitingTimes[3,1:30])
+lrSRTF.out = lm(meanBurstTimes[1:30,4]~meanWaitingTimes[4,1:30])
+print(summary(lrFCFS.out))
+print(summary(lrSJF.out))
+print(summary(lrRR.out))
+print(summary(lrSRTF.out))
+
+lrFCFS.out = lm(meanBurstTimes[1:30,1]~log(meanWaitingTimes[1,1:30]))
+lrSJF.out = lm(meanBurstTimes[1:30,2]~log(meanWaitingTimes[2,1:30]))
+lrRR.out = lm(meanBurstTimes[1:30,3]~log(meanWaitingTimes[3,1:30]))
+lrSRTF.out = lm(meanBurstTimes[1:30,4]~log(meanWaitingTimes[4,1:30]))
+print(summary(lrFCFS.out))
+print(summary(lrSJF.out))
+print(summary(lrRR.out))
+print(summary(lrSRTF.out))
+
+lrFCFS.out = lm(meanBurstTimes[1:30,1]~sqrt(meanWaitingTimes[1,1:30]))
+lrSJF.out = lm(meanBurstTimes[1:30,2]~sqrt(meanWaitingTimes[2,1:30]))
+lrRR.out = lm(meanBurstTimes[1:30,3]~sqrt(meanWaitingTimes[3,1:30]))
+lrSRTF.out = lm(meanBurstTimes[1:30,4]~sqrt(meanWaitingTimes[4,1:30]))
+print(summary(lrFCFS.out))
+print(summary(lrSJF.out))
+print(summary(lrRR.out))
+print(summary(lrSRTF.out))
+
+lrFCFS.out = lm(meanBurstTimes[1:30,1]^(-1)~meanWaitingTimes[1,1:30])
+lrSJF.out = lm(meanBurstTimes[1:30,2]^(-1)~meanWaitingTimes[2,1:30])
+lrRR.out = lm(meanBurstTimes[1:30,3]^(-1)~meanWaitingTimes[3,1:30])
+lrSRTF.out = lm(meanBurstTimes[1:30,4]^(-1)~meanWaitingTimes[4,1:30])
+print(summary(lrFCFS.out))
+print(summary(lrSJF.out))
+print(summary(lrRR.out))
+print(summary(lrSRTF.out))
+
+#========== LARGE BATCH REGRESSION ==================
+
+lrFCFSLarge.out = lm(meanLargeBurstTimes[1:30,1]~(meanLargeWaitingTimes[1:30,1]))
+lrSJFLarge.out = lm(meanLargeBurstTimes[1:30,2]~(meanLargeWaitingTimes[1:30,2]))
+lrRRLarge.out = lm(meanLargeBurstTimes[1:30,3]~(meanLargeWaitingTimes[1:30,3]))
+lrSRTFLarge.out = lm(meanLargeBurstTimes[1:30,4]~(meanLargeWaitingTimes[1:30,4]))
+print(summary(lrFCFSLarge.out))
+print(summary(lrSJFLarge.out))
+print(summary(lrRRLarge.out))
+print(summary(lrSRTFLarge.out))
+
+lrFCFSLarge.out = lm(meanLargeBurstTimes[1:30,1]~log(meanLargeWaitingTimes[1:30,1]))
+lrSJFLarge.out = lm(meanLargeBurstTimes[1:30,2]~log(meanLargeWaitingTimes[1:30,2]))
+lrRRLarge.out = lm(meanLargeBurstTimes[1:30,3]~log(meanLargeWaitingTimes[1:30,3]))
+lrSRTFLarge.out = lm(meanLargeBurstTimes[1:30,4]~log(meanLargeWaitingTimes[1:30,4]))
+print(summary(lrFCFSLarge.out))
+print(summary(lrSJFLarge.out))
+print(summary(lrRRLarge.out))
+print(summary(lrSRTFLarge.out))
+
+lrFCFSLarge.out = lm(meanLargeBurstTimes[1:30,1]~sqrt(meanLargeWaitingTimes[1:30,1]))
+lrSJFLarge.out = lm(meanLargeBurstTimes[1:30,2]~sqrt(meanLargeWaitingTimes[1:30,2]))
+lrRRLarge.out = lm(meanLargeBurstTimes[1:30,3]~sqrt(meanLargeWaitingTimes[1:30,3]))
+lrSRTFLarge.out = lm(meanLargeBurstTimes[1:30,4]~sqrt(meanLargeWaitingTimes[1:30,4]))
+print(summary(lrFCFSLarge.out))
+print(summary(lrSJFLarge.out))
+print(summary(lrRRLarge.out))
+print(summary(lrSRTFLarge.out))
+
+lrFCFSLarge.out = lm(meanLargeBurstTimes[1:30,1]~(meanLargeWaitingTimes[1:30,1]))
+lrSJFLarge.out = lm(meanLargeBurstTimes[1:30,2]~(meanLargeWaitingTimes[1:30,2]))
+lrRRLarge.out = lm(meanLargeBurstTimes[1:30,3]~(meanLargeWaitingTimes[1:30,3]))
+lrSRTFLarge.out = lm(meanLargeBurstTimes[1:30,4]~(meanLargeWaitingTimes[1:30,4]))
+print(summary(lrFCFSLarge.out))
+print(summary(lrSJFLarge.out))
+print(summary(lrRRLarge.out))
+print(summary(lrSRTFLarge.out))
