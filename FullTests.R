@@ -30,10 +30,10 @@ exec_simulator <- function(fileId){
     
     #Run in 4 methods, need function to make it one line per file
     #C:/Users/marco/anaconda3/envs/rstudio/python.exe -> dont delete pls
-    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler fcfs --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultFCFS.txt", sep = ''))
-    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler sjf  --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSJF.txt", sep = ''))
-    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler rr   --quantum 1 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
-    system(paste("C:/Users/marco/anaconda3/envs/rstudio/python.exe simulator.py --cpu-scheduler srtf --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSRTF.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler fcfs --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultFCFS.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler sjf  --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSJF.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler rr   --quantum 1 --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultRR.txt", sep = ''))
+    system(paste("py simulator.py --cpu-scheduler srtf --input-file WorkloadFiles/workload",fileId,".txt --output-file ResultFiles/testResultSRTF.txt", sep = ''))
     
 }
 
@@ -253,9 +253,7 @@ sdBurstTimes <- matrix(nrow = num_runs, ncol = 4)
 meanWaitingTimes <- matrix(nrow = num_runs, ncol = 4)
 
 aux <- 1
-for (i in seq(1, by=length(tmp), length=num_runs)){
-    
-    eval_parameter <- aux 
+for (i in seq(1, by=1, length=num_runs)){
     
     fileId = paste("Default", aux, sep = '')
     #gen_workload(NumProcs, MeanIoBursts, MeanIat, MinCPU, MaxCPU, MinIO, MaxIO)
@@ -323,7 +321,16 @@ hist(meanTatTimes[,4], xlab = xLabel, main = "SRTF", seq(0, xEndHist, 10))
 #print(t.test(meanTatTimes[,2], meanTatTimes[,3], alternative = "l"))
 cat("SD comparison for ANOVA", mean(sdTatTimes[,1]), mean(sdTatTimes[,2]), mean(sdTatTimes[,3]), mean(sdTatTimes[,4]))
 BurstTimes = meanBurstTimes[,1]
-print(summary(manova(cbind(meanTatTimes[,1], meanTatTimes[,2], meanTatTimes[,3], meanTatTimes[,4]) ~ BurstTimes)))
+
+tatData = data.frame(TatTime = c(t(meanTatTimes[,1]), t(meanTatTimes[,2]), t(meanTatTimes[,3]), t(meanTatTimes[,4])))
+tatData[1:num_runs,2] = "FCFS";
+tatData[(num_runs+1):(2*num_runs),2] = "SJF";
+tatData[(2*num_runs+1):(3*num_runs),2] = "RR";
+tatData[(3*num_runs+1):(4*num_runs),2] = "SRTF";
+
+colnames(tatData) <- c("TatTime", "Scheduler")
+
+print(summary(aov(TatTime ~ Scheduler, data = tatData)))
 
 
 #==========================================================
@@ -383,9 +390,19 @@ for (i in seq(1, by=length(tmp), length=num_runs)){
     aux <- aux + 1 #Change to exponential?
 }
 
-print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,3], alternative = "l"))
-print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,1], alternative = "l"))
-print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,4], alternative = "l"))
+tatLargeData = data.frame(TatTime = c(t(meanLargeTatTimes[,1]), t(meanLargeTatTimes[,2]), t(meanLargeTatTimes[,3]), t(meanLargeTatTimes[,4])))
+tatLargeData[1:num_runs,2] = "FCFS";
+tatLargeData[(num_runs+1):(2*num_runs),2] = "SJF";
+tatLargeData[(2*num_runs+1):(3*num_runs),2] = "RR";
+tatLargeData[(3*num_runs+1):(4*num_runs),2] = "SRTF";
+
+colnames(tatLargeData) <- c("TatLargeTime", "Scheduler")
+
+print(summary(aov(TatLargeTime ~ Scheduler, data = tatLargeData)))
+
+print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,3], alternative = "l", conf.level = 0.99))
+print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,1], alternative = "l", conf.level = 0.99))
+print(t.test(meanLargeTatTimes[,2], meanLargeTatTimes[,4], alternative = "l", conf.level = 0.99))
 
 
 par(mfrow=c(2,2))
